@@ -1,0 +1,36 @@
+steps:
+  - task: UseDotNet@2
+    inputs:
+      version: $(dotNetVersion)
+      includePreviewVersions: true
+
+  - script: dotnet build src/GetSettings/GetSettings.csproj --configuration $(buildConfiguration)
+    displayName: "Build .NET 6 Application"
+
+  - task: NuGetToolInstaller@1
+
+  - task: NuGetCommand@2
+    inputs:
+      restoreSolution: "$(solution)"
+
+  - task: DotNetCoreCLI@2
+     displayName: Run unit tests
+     inputs:
+       command: "test"
+       projects: "test/GetSettings.Tests/GetSettings.Tests.csproj"
+       testRunTitle: "Unit Tests"
+
+  - task: DotNetCoreCLI@2
+    displayName: Publish to $(Build.ArtifactStagingDirectory)
+    inputs:
+      command: "publish"
+      publishWebProjects: false
+      projects: "src/CreateSetting/CreateSetting.csproj"
+      arguments: '-c Release -o "$(Build.ArtifactStagingDirectory)" -r linux-x64 --no-self-contained --framework $(dotNetFramework) -p:PublishReadyToRun=true'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Artifacts
+    inputs:
+      PathtoPublish: "$(Build.ArtifactStagingDirectory)"
+      ArtifactName: "drop"
+      publishLocation: "Container"
